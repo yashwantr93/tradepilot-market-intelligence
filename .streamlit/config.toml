@@ -1,0 +1,16 @@
+# Streamlit configuration.
+#
+# We use a custom sidebar navigation in app.py, so we disable Streamlit's
+# automatic multipage navigation that would otherwise be generated from the
+# pages/ directory.
+
+[client]
+showSidebarNavigation = false
+
+[theme]
+base = "dark"
+primaryColor = "#2563eb"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#1a1f2b"
+textColor = "#e6e9ef"
+font = "sans serif"

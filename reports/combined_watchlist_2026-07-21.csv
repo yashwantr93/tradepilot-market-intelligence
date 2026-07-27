@@ -1,0 +1,11 @@
+Symbol,Sector,Catalyst,Relative Strength,Above 20 SMA,Volume Expansion,Technical Status,Tier
+IRFC,Unknown,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+BEL,Unknown,BIG_BULK_BUY,Weak,N,N,Avoid,3
+BHARTIARTL,Unknown,BIG_BLOCK_BUY,Weak,Y,Y,Monitor,3
+DLF,Unknown,BIG_BLOCK_BUY,Weak,Y,Y,Monitor,3
+HAL,Unknown,BIG_BULK_BUY,Weak,N,Y,Avoid,3
+PFC,Unknown,BIG_BLOCK_BUY,Weak,N,Y,Avoid,3
+SUZLON,Unknown,BIG_BULK_BUY,Weak,N,N,Avoid,3
+TATAMOTORS,Unknown,BIG_BULK_BUY,Weak,Y,Y,Monitor,3
+VEDL,Unknown,BIG_BLOCK_BUY,Weak,Y,Y,Monitor,3
+ZOMATO,Unknown,BIG_BULK_BUY,Weak,Y,Y,Monitor,3

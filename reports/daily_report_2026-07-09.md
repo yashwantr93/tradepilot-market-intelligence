@@ -1,0 +1,59 @@
+# Daily Watchlist Report — 2026-07-09
+
+_Swing Trading Intelligence System — Rule-based swing-trade research · ~1–8 week horizon · no AI / no scoring / no buy-sell calls_
+
+_Generated 2026-07-10 14:29 · rule-based, real market data · no scoring / no ML / no prediction_
+
+## Pipeline summary
+
+- **Stocks processed (deal universe):** 33
+- **Bulk-deal candidate symbols:** 33
+- **Block-deal candidate symbols:** 0
+- **Final watchlist stocks:** 27
+
+## Watchlist
+
+| Symbol | Sector | Catalyst Tag | Current Price | Above 20 SMA | Relative Strength | Volume Expansion | Distance from 52W High (%) | Technical Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SHAREINDIA | Financial Services | BIG_BULK_BUY | 179.54 | Y | Strong | N | 14.49 | Ready |
+| AGIIL | Real Estate | BIG_BULK_BUY | 345.35 | N | Weak | Y | 20.5 | Avoid |
+| MASTERTR | Financial Services | BIG_BULK_BUY | 95.5 | Y | Strong | Y | 43.96 | Ready |
+| JINDRILL | Energy | BIG_BULK_BUY | 606.2 | Y | Strong | N | 12.59 | Ready |
+| KNACK | Consumer Cyclical | BIG_BULK_BUY | 211.98 | N | Neutral | N | 3.96 | Monitor |
+| SUNTECK | Real Estate | BIG_BULK_BUY | 329.25 | Y | Neutral | N | 30.32 | Monitor |
+| MOTISONS | Consumer Cyclical | BIG_BULK_BUY | 14.21 | N | Neutral | N | 40.84 | Monitor |
+| IKIO | Technology | BIG_BULK_BUY | 212.89 | Y | Strong | N | 15.82 | Monitor |
+| GCSL | Financial Services | REPEAT_BUYING | 489.1 | Y | Strong | N | 2.38 | Ready |
+| KALYANKJIL | Consumer Cyclical | BIG_BULK_BUY | 473.65 | Y | Strong | Y | 23.1 | Ready |
+| KAYNES | Technology | BIG_BULK_BUY | 3332.0 | Y | Weak | N | 56.76 | Monitor |
+| ITDC | Consumer Cyclical | BIG_BULK_BUY | 719.35 | Y | Strong | N | 8.66 | Ready |
+| PCJEWELLER | Consumer Cyclical | BIG_BULK_BUY | 9.99 | Y | Strong | N | 48.51 | Monitor |
+| INA | Technology | BIG_BULK_BUY | 124.2 | Y | Weak | Y | 23.24 | Monitor |
+| TBZ | Consumer Cyclical | BIG_BULK_BUY | 234.76 | Y | Strong | N | 3.01 | Ready |
+| UNICHEMLAB | Healthcare | BIG_BULK_BUY | 645.4 | Y | Strong | N | 6.08 | Ready |
+| CNL | Technology | BIG_BULK_BUY | 818.9 | Y | Strong | Y | 8.91 | Ready |
+| KODYTECH | Unknown | BIG_BULK_BUY | 1125.2 | Y | Strong | Y | 3.0 | Ready |
+| SHANTIGOLD | Consumer Cyclical | BIG_BULK_BUY | 214.6 | N | Strong | N | 21.71 | Monitor |
+| ATALREAL | Industrials | REPEAT_BUYING | 28.7 | N | Strong | N | 10.31 | Monitor |
+| MAGSON | Unknown | REPEAT_BUYING | 178.95 | Y | Neutral | N | 10.3 | Ready |
+| RAMCOSYS | Technology | REPEAT_BUYING | 814.5 | Y | Strong | N | 15.81 | Monitor |
+| BMLL | Unknown | REPEAT_BUYING | nan | N | Neutral | N | nan | Monitor |
+| COMSYN | Consumer Cyclical | REPEAT_BUYING | 195.14 | Y | Strong | Y | 8.38 | Ready |
+| RITES | Industrials | REPEAT_BUYING | 225.46 | Y | Neutral | N | 18.51 | Monitor |
+| SAKSOFT | Technology | REPEAT_BUYING | 170.5 | Y | Strong | N | 32.59 | Monitor |
+| SIGNPOST | Communication Services | REPEAT_BUYING | 316.2 | Y | Strong | N | 3.12 | Ready |
+
+## Technical status breakdown
+
+| Status | Count |
+| --- | --- |
+| Ready | 13 |
+| Monitor | 13 |
+| Avoid | 1 |
+
+## Catalyst breakdown
+
+| Catalyst | Count |
+| --- | --- |
+| BIG_BULK_BUY | 18 |
+| REPEAT_BUYING | 9 |

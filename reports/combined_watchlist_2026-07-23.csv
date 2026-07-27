@@ -1,0 +1,39 @@
+Symbol,Sector,Catalyst,Relative Strength,Above 20 SMA,Volume Expansion,Technical Status,Tier
+BAJAJ-AUTO,Auto,Improving Sector,Strong,Y,-,-,2
+BAJAJFINSV,Financial Services,Improving Sector,Strong,Y,-,-,2
+BAJFINANCE,Financial Services,Improving Sector,Strong,Y,-,-,2
+CHOLAFIN,Financial Services,Improving Sector,Strong,N,-,-,2
+CIPLA,Pharma,Strong Sector,Strong,N,-,-,2
+DIVISLAB,Pharma,Strong Sector,Strong,Y,-,-,2
+DLF,Realty,Strong Sector,Strong,N,-,-,2
+EICHERMOT,Auto,Improving Sector,Strong,Y,-,-,2
+GODREJPROP,Realty,Strong Sector,Strong,Y,-,-,2
+HCLTECH,IT,Strong Sector,Strong,Y,-,-,2
+LUPIN,Pharma,Strong Sector,Strong,N,-,-,2
+OBEROIRLTY,Realty,Strong Sector,Strong,N,-,-,2
+PHOENIXLTD,Realty,Strong Sector,Strong,Y,-,-,2
+PRESTIGE,Realty,Strong Sector,Strong,Y,-,-,2
+SHRIRAMFIN,Financial Services,Improving Sector,Strong,N,-,-,2
+TECHM,IT,Strong Sector,Strong,Y,-,-,2
+INFY,IT,Strong Sector,Neutral,N,-,-,2
+M&M,Auto,Improving Sector,Neutral,Y,-,-,2
+MARUTI,Auto,Improving Sector,Neutral,N,-,-,2
+SBICARD,Financial Services,Improving Sector,Neutral,Y,-,-,2
+SUNPHARMA,Pharma,Strong Sector,Neutral,Y,-,-,2
+TCS,IT,Strong Sector,Neutral,Y,-,-,2
+DRREDDY,Pharma,Strong Sector,Weak,N,-,-,2
+WIPRO,IT,Strong Sector,Weak,Y,-,-,2
+ATALREAL,Industrials,BIG_BULK_BUY,Strong,Y,N,Ready,3
+BLUESTONE,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+FEDDERSHOL,Unknown,REPEAT_BUYING,Strong,Y,Y,Ready,3
+GANDHAR,Energy,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+HUHTAMAKI,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+LOTUSDEV,Industrials,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+MOTISONS,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,N,Monitor,3
+OFSS,Technology,BIG_BULK_BUY,Strong,N,N,Monitor,3
+ROUTE,Communication Services,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+TANLA,Technology,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+WAKEFIT,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+AASTHA,Consumer Cyclical,BIG_BULK_BUY,Neutral,N,N,Monitor,3
+AGIIL,Real Estate,BIG_BULK_BUY,Weak,N,N,Avoid,3
+ASIANTILES,Industrials,BIG_BULK_BUY,Weak,Y,Y,Monitor,3

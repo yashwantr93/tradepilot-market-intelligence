@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="640" height="160">
+  <title>TradePilot AI — Market Intelligence Platform (dark-background variant)</title>
+  <!-- Transparent background; light wordmark for use on dark surfaces. -->
+
+  <g transform="translate(10,10) scale(0.2734375)">
+    <circle cx="256" cy="256" r="215" fill="none" stroke="#2563EB" stroke-width="23"/>
+    <path d="M 91.3 394.2 A 215 215 0 0 0 458.0 182.5"
+          fill="none" stroke="#22C55E" stroke-width="23" stroke-linecap="round"/>
+    <line x1="174" y1="220" x2="174" y2="348" stroke="#94A3B8" stroke-width="9" stroke-linecap="round"/>
+    <rect x="151" y="246" width="46" height="82" rx="6" fill="#94A3B8"/>
+    <line x1="256" y1="179" x2="256" y2="348" stroke="#3B82F6" stroke-width="9" stroke-linecap="round"/>
+    <rect x="233" y="205" width="46" height="123" rx="6" fill="#3B82F6"/>
+    <line x1="338" y1="128" x2="338" y2="348" stroke="#22C55E" stroke-width="9" stroke-linecap="round"/>
+    <rect x="315" y="154" width="46" height="174" rx="6" fill="#22C55E"/>
+    <line x1="409.6" y1="138.4" x2="428" y2="120" stroke="#22C55E" stroke-width="14" stroke-linecap="round"/>
+    <polygon points="452,96 442.1,134.1 413.9,105.9" fill="#22C55E"/>
+  </g>
+
+  <text x="176" y="95" font-family="Inter, 'Segoe UI', Arial, sans-serif"
+        font-size="54" font-weight="700" fill="#F8FAFC">TradePilot<tspan fill="#22C55E"> AI</tspan></text>
+  <text x="178" y="128" font-family="Inter, 'Segoe UI', Arial, sans-serif"
+        font-size="19" font-weight="600" letter-spacing="3" fill="#94A3B8">MARKET INTELLIGENCE PLATFORM</text>
+</svg>

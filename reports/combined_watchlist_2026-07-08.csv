@@ -1,0 +1,49 @@
+Symbol,Sector,Catalyst,Relative Strength,Above 20 SMA,Volume Expansion,Technical Status,Tier
+BAJAJFINSV,Financial Services,Improving Sector,Strong,Y,-,-,2
+BAJFINANCE,Financial Services,Improving Sector,Strong,Y,-,-,2
+CHOLAFIN,Financial Services,Improving Sector,Strong,Y,-,-,2
+CIPLA,Pharma,Strong Sector,Strong,Y,-,-,2
+DIVISLAB,Pharma,Strong Sector,Strong,Y,-,-,2
+DLF,Realty,Strong Sector,Strong,Y,-,-,2
+GODREJPROP,Realty,Strong Sector,Strong,Y,-,-,2
+HDFCBANK,Banking,Improving Sector,Strong,Y,-,-,2
+ICICIBANK,Banking,Improving Sector,Strong,Y,-,-,2
+LUPIN,Pharma,Strong Sector,Strong,Y,-,-,2
+OBEROIRLTY,Realty,Strong Sector,Strong,Y,-,-,2
+PHOENIXLTD,Realty,Strong Sector,Strong,Y,-,-,2
+PRESTIGE,Realty,Strong Sector,Strong,Y,-,-,2
+SHRIRAMFIN,Financial Services,Improving Sector,Strong,Y,-,-,2
+SUNPHARMA,Pharma,Strong Sector,Strong,Y,-,-,2
+AXISBANK,Banking,Improving Sector,Neutral,N,-,-,2
+BDL,Defence,Improving Sector,Neutral,N,-,-,2
+DRREDDY,Pharma,Strong Sector,Neutral,N,-,-,2
+HAL,Defence,Improving Sector,Neutral,N,-,-,2
+KOTAKBANK,Banking,Improving Sector,Neutral,N,-,-,2
+SBIN,Banking,Improving Sector,Neutral,N,-,-,2
+BEL,Defence,Improving Sector,Weak,N,-,-,2
+COCHINSHIP,Defence,Improving Sector,Weak,N,-,-,2
+MAZDOCK,Defence,Improving Sector,Weak,N,-,-,2
+SBICARD,Financial Services,Improving Sector,Weak,N,-,-,2
+ATALREAL,Industrials,BIG_BULK_BUY,Strong,N,N,Monitor,3
+CGCL,Financial Services,BIG_BULK_BUY,Strong,Y,N,Ready,3
+COMSYN,Consumer Cyclical,REPEAT_BUYING,Strong,Y,N,Ready,3
+GCSL,Financial Services,REPEAT_BUYING,Strong,Y,N,Ready,3
+GEMAROMA,Basic Materials,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+IOLCP,Healthcare,BIG_BULK_BUY,Strong,Y,N,Ready,3
+ITDC,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+JINDRILL,Energy,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+MASTERTR,Financial Services,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+RAMCOSYS,Technology,BIG_BULK_BUY,Strong,Y,N,Ready,3
+RATNAVEER,Basic Materials,BIG_BULK_BUY,Strong,Y,N,Ready,3
+SAKSOFT,Technology,BIG_BULK_BUY,Strong,Y,N,Monitor,3
+SHAREINDIA,Financial Services,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+SIGNPOST,Communication Services,REPEAT_BUYING,Strong,Y,N,Ready,3
+BMLL,Unknown,REPEAT_BUYING,Neutral,N,N,Monitor,3
+IWARE,Unknown,BIG_BULK_BUY,Neutral,N,N,Monitor,3
+KALYANKJIL,Consumer Cyclical,BIG_BULK_BUY,Neutral,Y,Y,Ready,3
+KNACK,Consumer Cyclical,BIG_BULK_BUY,Neutral,N,N,Monitor,3
+RITES,Industrials,REPEAT_BUYING,Neutral,Y,N,Monitor,3
+AGIIL,Real Estate,BIG_BULK_BUY,Weak,N,N,Avoid,3
+BAYERCROP,Basic Materials,BIG_BLOCK_BUY,Weak,N,N,Avoid,3
+MAGSON,Unknown,REPEAT_BUYING,Weak,Y,N,Monitor,3
+MODIS,Real Estate,BIG_BULK_BUY,Weak,Y,N,Monitor,3

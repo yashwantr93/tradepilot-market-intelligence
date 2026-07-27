@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>TradePilot AI — mark</title>
+  <!-- Transparent background: legible on both light and dark surfaces. -->
+
+  <!-- Outer ring: steady blue orbit -->
+  <circle cx="256" cy="256" r="215" fill="none" stroke="#2563EB" stroke-width="23"/>
+
+  <!-- Growth arc: green trajectory sweeping bottom-left -> bottom -> upper-right -->
+  <path d="M 91.3 394.2 A 215 215 0 0 0 458.0 182.5"
+        fill="none" stroke="#22C55E" stroke-width="23" stroke-linecap="round"/>
+
+  <!-- Candlesticks: ascending left -> right, rising into an uptrend -->
+  <!-- Candle 1 (slate) -->
+  <line x1="174" y1="220" x2="174" y2="348" stroke="#64748B" stroke-width="9" stroke-linecap="round"/>
+  <rect x="151" y="246" width="46" height="82" rx="6" fill="#64748B"/>
+
+  <!-- Candle 2 (blue) -->
+  <line x1="256" y1="179" x2="256" y2="348" stroke="#2563EB" stroke-width="9" stroke-linecap="round"/>
+  <rect x="233" y="205" width="46" height="123" rx="6" fill="#2563EB"/>
+
+  <!-- Candle 3 (green — the breakout candle) -->
+  <line x1="338" y1="128" x2="338" y2="348" stroke="#22C55E" stroke-width="9" stroke-linecap="round"/>
+  <rect x="315" y="154" width="46" height="174" rx="6" fill="#22C55E"/>
+
+  <!-- Upward trend arrow, continuing the growth arc -->
+  <line x1="409.6" y1="138.4" x2="428" y2="120" stroke="#22C55E" stroke-width="14" stroke-linecap="round"/>
+  <polygon points="452,96 442.1,134.1 413.9,105.9" fill="#22C55E"/>
+</svg>

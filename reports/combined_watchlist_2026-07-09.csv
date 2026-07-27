@@ -1,0 +1,53 @@
+Symbol,Sector,Catalyst,Relative Strength,Above 20 SMA,Volume Expansion,Technical Status,Tier
+BAJAJFINSV,Financial Services,Improving Sector,Strong,Y,-,-,2
+BAJFINANCE,Financial Services,Improving Sector,Strong,Y,-,-,2
+CHOLAFIN,Financial Services,Improving Sector,Strong,Y,-,-,2
+CIPLA,Pharma,Improving Sector,Strong,Y,-,-,2
+DLF,Realty,Strong Sector,Strong,Y,-,-,2
+GODREJPROP,Realty,Strong Sector,Strong,Y,-,-,2
+HDFCBANK,Banking,Improving Sector,Strong,Y,-,-,2
+ICICIBANK,Banking,Improving Sector,Strong,Y,-,-,2
+LUPIN,Pharma,Improving Sector,Strong,Y,-,-,2
+OBEROIRLTY,Realty,Strong Sector,Strong,Y,-,-,2
+PHOENIXLTD,Realty,Strong Sector,Strong,Y,-,-,2
+PRESTIGE,Realty,Strong Sector,Strong,Y,-,-,2
+SHRIRAMFIN,Financial Services,Improving Sector,Strong,Y,-,-,2
+SUNPHARMA,Pharma,Improving Sector,Strong,Y,-,-,2
+AXISBANK,Banking,Improving Sector,Neutral,N,-,-,2
+DIVISLAB,Pharma,Improving Sector,Neutral,Y,-,-,2
+HCLTECH,IT,Improving Sector,Neutral,Y,-,-,2
+KOTAKBANK,Banking,Improving Sector,Neutral,N,-,-,2
+SBIN,Banking,Improving Sector,Neutral,Y,-,-,2
+TECHM,IT,Improving Sector,Neutral,Y,-,-,2
+DRREDDY,Pharma,Improving Sector,Weak,N,-,-,2
+INFY,IT,Improving Sector,Weak,Y,-,-,2
+SBICARD,Financial Services,Improving Sector,Weak,Y,-,-,2
+TCS,IT,Improving Sector,Weak,N,-,-,2
+WIPRO,IT,Improving Sector,Weak,N,-,-,2
+ATALREAL,Industrials,REPEAT_BUYING,Strong,N,N,Monitor,3
+CNL,Technology,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+COMSYN,Consumer Cyclical,REPEAT_BUYING,Strong,Y,Y,Ready,3
+GCSL,Financial Services,REPEAT_BUYING,Strong,Y,N,Ready,3
+IKIO,Technology,BIG_BULK_BUY,Strong,Y,N,Monitor,3
+ITDC,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,N,Ready,3
+JINDRILL,Energy,BIG_BULK_BUY,Strong,Y,N,Ready,3
+KALYANKJIL,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+KODYTECH,Unknown,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+MASTERTR,Financial Services,BIG_BULK_BUY,Strong,Y,Y,Ready,3
+PCJEWELLER,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,N,Monitor,3
+RAMCOSYS,Technology,REPEAT_BUYING,Strong,Y,N,Monitor,3
+SAKSOFT,Technology,REPEAT_BUYING,Strong,Y,N,Monitor,3
+SHANTIGOLD,Consumer Cyclical,BIG_BULK_BUY,Strong,N,N,Monitor,3
+SHAREINDIA,Financial Services,BIG_BULK_BUY,Strong,Y,N,Ready,3
+SIGNPOST,Communication Services,REPEAT_BUYING,Strong,Y,N,Ready,3
+TBZ,Consumer Cyclical,BIG_BULK_BUY,Strong,Y,N,Ready,3
+UNICHEMLAB,Healthcare,BIG_BULK_BUY,Strong,Y,N,Ready,3
+BMLL,Unknown,REPEAT_BUYING,Neutral,N,N,Monitor,3
+KNACK,Consumer Cyclical,BIG_BULK_BUY,Neutral,N,N,Monitor,3
+MAGSON,Unknown,REPEAT_BUYING,Neutral,Y,N,Ready,3
+MOTISONS,Consumer Cyclical,BIG_BULK_BUY,Neutral,N,N,Monitor,3
+RITES,Industrials,REPEAT_BUYING,Neutral,Y,N,Monitor,3
+SUNTECK,Real Estate,BIG_BULK_BUY,Neutral,Y,N,Monitor,3
+AGIIL,Real Estate,BIG_BULK_BUY,Weak,N,Y,Avoid,3
+INA,Technology,BIG_BULK_BUY,Weak,Y,Y,Monitor,3
+KAYNES,Technology,BIG_BULK_BUY,Weak,Y,N,Monitor,3
