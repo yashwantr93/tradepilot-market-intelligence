@@ -12,6 +12,7 @@ APP_NAME = "TradePilot AI"
 APP_SUBTITLE = "Market Intelligence Platform"
 APP_FULL_NAME = f"{APP_NAME} — {APP_SUBTITLE}"
 APP_SHORT = "TradePilot AI"
+APP_VERSION = "1.0.0"
 APP_DESCRIPTION = (
     "TradePilot AI is a Rule-Based Swing Trading Intelligence System "
     "for the Indian Stock Market."

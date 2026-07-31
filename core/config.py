@@ -13,11 +13,15 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
+# MID_DATA_DIR / MID_LOGS_DIR relocate data_store/ and logs/ as a whole — e.g.
+# to a Render persistent disk mount point. Unset, both default to exactly
+# where they've always lived (relative to the project root), so local/Windows
+# usage is completely unaffected.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_STORE_DIR = PROJECT_ROOT / "data_store"
-LOGS_DIR = PROJECT_ROOT / "logs"
-DATA_STORE_DIR.mkdir(exist_ok=True)
-LOGS_DIR.mkdir(exist_ok=True)
+DATA_STORE_DIR = Path(os.environ.get("MID_DATA_DIR", str(PROJECT_ROOT / "data_store")))
+LOGS_DIR = Path(os.environ.get("MID_LOGS_DIR", str(PROJECT_ROOT / "logs")))
+DATA_STORE_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # SQLite by default; override with MID_DATABASE_URL for Postgres later.
 DATABASE_URL = os.environ.get(

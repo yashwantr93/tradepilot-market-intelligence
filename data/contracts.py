@@ -516,3 +516,15 @@ def db_available() -> bool:
     df = _read("SELECT name FROM sqlite_master WHERE type='table' "
                "AND name='daily_watchlist'")
     return not df.empty
+
+
+@st.cache_data(ttl=60)
+def recent_job_runs(limit: int = 10) -> pd.DataFrame:
+    """Most recent pipeline runs from the `job_runs` audit trail — powers the
+    Settings page's scheduler/last-refresh status. Read-only, same as every
+    other getter in this module."""
+    df = _read(
+        "SELECT job_name, source, started_at, finished_at, duration_s, "
+        "status, rows_in, rows_out, error FROM job_runs "
+        "ORDER BY started_at DESC LIMIT :limit", {"limit": limit})
+    return df

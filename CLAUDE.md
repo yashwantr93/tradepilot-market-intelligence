@@ -1,18 +1,48 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) and human contributors
+working in this repository.
 
-## What this is
+## 1. Project Purpose
 
-TradePilot AI — a rule-based swing-trading research dashboard for the Indian stock market
-(NSE/BSE). It surfaces deal flow, institutional (FII/DII) activity, sector rotation,
-corporate actions, and quarterly results as transparent if/else signals. **There is no
-ML/AI scoring anywhere in this codebase** — every classification is a deterministic,
-explainable rule defined in `core/config.py`. Do not introduce probabilistic scoring,
-ranking models, or opaque heuristics; if a new rule is needed, add it as an explicit,
-documented threshold/condition.
+TradePilot AI is a rule-based swing-trading research dashboard for the Indian stock
+market (NSE/BSE). It surfaces deal flow, institutional (FII/DII) activity, sector
+rotation, corporate actions, and quarterly results as transparent if/else signals —
+no ML/AI scoring anywhere in this codebase.
 
-## Commands
+## 2. Folder Structure
+
+```
+market_intelligence_dashboard/
+├── app.py                  # Streamlit entry point; PAGES dict wires up all pages
+├── components.py           # Shared UI components
+├── run_*.py                # Pipeline entry points (see "How to Run")
+├── core/                   # V1 engine — connectors, pipelines, processing, db
+│   ├── connectors/           # Raw data fetchers (NSE/BSE, yfinance), subclass BaseConnector
+│   ├── pipelines/             # One file per data domain; EXTRACT→TRANSFORM→VALIDATE→STORE
+│   ├── processing/            # Stateless rule logic (technicals, classification, sector map)
+│   ├── db/                    # SQLAlchemy models + engine (data_store/market.db)
+│   ├── validation/             # Row-level validators (bad rows quarantined, not dropped)
+│   ├── watchlist/              # Selection engine / rules.py
+│   ├── sector_rotation/        # Sector relative-strength logic
+│   ├── utils/                  # Shared helpers
+│   └── config.py               # ALL tunable thresholds — see Coding Standards
+├── data/                    # data/contracts.py — the ONLY DB→UI read bridge
+├── pages/                   # Streamlit pages (V1) — read-only, call contracts.py only
+├── intelligence_v2/         # V2 — isolated subsystem, own db/config/logger (see below)
+│   ├── config/ connectors/ contracts/ database/ models/ processors/ services/
+│   ├── pages/                  # V2 Streamlit pages, wired into the same app.py PAGES dict
+│   └── tests/                   # The only test suite in this repo
+├── seed/                    # Deterministic offline/seeded data
+├── scripts/                 # One-off utilities (e.g. brand asset generation)
+├── assets/brand/            # Logos, icons
+├── docs/                    # Design docs & PRDs (see Future Roadmap)
+├── data_store/              # Generated SQLite DBs — gitignored, never hand-edit
+├── reports/                 # Generated markdown/CSV report artifacts — gitignored
+└── logs/                    # Runtime logs — gitignored
+```
+
+## 3. How to Run
 
 ```bash
 pip install -r requirements.txt
@@ -32,106 +62,124 @@ python run_validation.py        # Signal validation (forward returns)
 # V2 subsystem (separate database, run independently, in this order):
 python run_v2_healthcheck.py
 python run_v2_sector_intelligence.py   # requires V1's sector_rotation data to exist
-python run_v2_market_cycle.py         # requires run_v2_sector_intelligence.py first
+python run_v2_market_cycle.py          # requires run_v2_sector_intelligence.py first
 
 # Dashboard (reads whichever data the pipelines last wrote — re-run a pipeline
 # and reload the page to refresh; the UI never fetches or computes on its own):
 streamlit run app.py
+```
 
-# Tests (V2 only — V1 has no test suite):
+VS Code / Claude launch config: `.claude/launch.json` (`streamlit run app.py
+--server.headless true --server.port 8531`). On Windows, `run_daily_scheduled.ps1`
+runs the full `run_daily.py` sequence unattended via Task Scheduler, logging to
+`logs/scheduled_run.log`.
+
+Set `MID_OFFLINE=0` to attempt live NSE/BSE/yfinance fetches instead of the
+deterministic seeded fallback (default `MID_OFFLINE=1` — falls back to seed data
+on any live-fetch failure, so the pipeline is always reproducible without credentials).
+
+## 4. Development Workflow
+
+1. Change thresholds/rules first in `core/config.py` before touching processing logic —
+   that file is the intended extension point (see Coding Standards).
+2. Run the relevant pipeline(s) locally with default offline mode before reloading the
+   dashboard — the UI never computes anything itself, it only reads what pipelines wrote.
+3. Adding a page = one import + one line in the `PAGES` dict in `app.py` (V1) or the
+   equivalent in `intelligence_v2/`.
+4. Keep V1 (`core/`, `data/`, `pages/`) and V2 (`intelligence_v2/`) isolated — see
+   Architecture Notes below before adding any cross-imports.
+5. `reports/` output is a side effect of pipeline runs, not something to hand-edit;
+   re-run the pipeline to regenerate it.
+
+## 5. Git Workflow
+
+- Single `main` branch; no release branches yet. Commit directly to `main` for now,
+  but keep commits scoped to one logical change (one rule tweak, one pipeline fix, etc.)
+  so history stays useful for debugging a bad signal later.
+- Commit message convention: `<area>: <what changed>` (e.g. `config: raise RS strong
+  threshold to 1.15`, `pipelines: fix corp-actions dedup key`).
+- Generated data (`data_store/*.db`, `logs/`, `reports/`, `__pycache__/`) is gitignored —
+  never `git add -f` these; if a pipeline needs its output tracked, export a summary into
+  `docs/` instead.
+- Before committing a `core/config.py` threshold change, note the *reason* in the commit
+  body (what signal prompted it) — thresholds have no other changelog.
+
+## 6. Testing Commands
+
+```bash
+# V2 only — V1 currently has no automated test suite (see Future Roadmap):
 python -m pytest intelligence_v2/tests/ -v
 ```
 
-There is a VS-Code/Claude launch config at `.claude/launch.json` (`streamlit run app.py
---server.headless true --server.port 8531`).
+For V1, validate changes manually via `python run_validation.py` (forward-return
+signal validation) and by spot-checking `reports/` output after a pipeline run.
 
-On Windows, the whole `run_daily.py` sequence is also invoked unattended via Task
-Scheduler through `run_daily_scheduled.ps1`, which logs to `logs/scheduled_run.log`.
+## 7. Common Troubleshooting
 
-Set `MID_OFFLINE=0` to attempt live data sources (NSE/BSE/yfinance) instead of the
-deterministic seeded fallback data — see Offline mode below.
+- **Dashboard shows stale/empty data** — the UI never fetches on its own; re-run the
+  relevant pipeline (`run_live.py`, `run_institutional.py`, etc.) then reload the page.
+- **V2 pipeline errors referencing missing sector data** — run
+  `run_v2_sector_intelligence.py` before `run_v2_market_cycle.py`; V2 depends on V1's
+  `sector_rotation` table via a read-only bridge.
+- **`database is locked`** — close any other process (Streamlit, a Python shell) holding
+  an open connection to `data_store/market.db` or `market_v2.db`.
+- **A write attempt into V1's DB from V2 code fails unexpectedly** — this is by design;
+  `intelligence_v2/database/v1_reference.py` opens `market.db` with SQLite's
+  `mode=ro` URI, so writes are rejected at the OS/SQLite level, not just by convention.
+- **`ModuleNotFoundError`** — re-run `pip install -r requirements.txt`; V1 and V2 share
+  one requirements file.
+- **Corporate-action miscategorized** — check keyword order in `EVENT_TYPE_RULES` in
+  `core/config.py`; it's an ordered list and the first matching keyword wins (e.g.
+  "rights"/"preferential" must precede a generic "fund rais" match).
+- **Live fetch failing** — confirm `MID_OFFLINE` is set as intended; `0` attempts live
+  NSE/BSE/yfinance and falls back to seed data on failure, `1` (default) skips the
+  network entirely.
 
-## Architecture
+## 8. Coding Standards
 
-```
-Connectors → Processing → Database (SQLite) → Contracts → Dashboard (read-only)
-```
+- **Rule-based only.** No ML/AI scoring, probabilistic ranking, or opaque heuristics.
+  Every classification is a deterministic, documented threshold/condition in
+  `core/config.py`. A new rule = an explicit condition there, not a model.
+- **Pipelines follow EXTRACT → TRANSFORM → VALIDATE → STORE**: fetch via a
+  `BaseConnector` subclass, enrich via `core/processing/transforms.py`, validate via
+  `core/processing/validators.py` (bad rows go to a dead-letter table, never silently
+  dropped), then dedup-upsert via `core/db/repository.py`. Wrap every run in a job
+  record (`repo.start_job` / `repo.finish_job`) for auditability.
+- **`data/contracts.py` is the only read bridge** between the DB and the UI. All
+  `st.cache_data` getters live there, including `opportunity_hub()`'s priority/action/
+  "why not" derivation — display-only re-ranking over already-computed fields, never a
+  new scoring model.
+- **Dashboard pages are strictly read-only** — they call `data/contracts.py` getters
+  and render; they never touch connectors, pipelines, or the DB directly.
+- **V1/V2 isolation is load-bearing, not stylistic.** Nothing in `intelligence_v2/`
+  imports from `core.*`, and nothing in `core/` imports from `intelligence_v2/`. If you
+  touch `intelligence_v2/`, do not add a `core.*` import.
 
-- **Connectors** (`core/connectors/`) — fetch raw data (NSE/BSE archive CSVs, yfinance
-  prices). All subclass `BaseConnector` (`core/connectors/base.py`): one `fetch(resource,
-  **params)` method returning a normalized DataFrame, with retry/backoff built in.
-- **Pipelines** (`core/pipelines/`) — one file per data domain (deals, FII/DII, corp
-  actions, results, price/technicals). Each follows **EXTRACT → TRANSFORM → VALIDATE →
-  STORE**: fetch via connector(s), enrich via `core/processing/transforms.py`, validate/
-  quarantine bad rows via `core/processing/validators.py` (rejects go to a dead-letter
-  table, they never silently disappear), then dedup-upsert via `core/db/repository.py`.
-  Every pipeline run is wrapped in a job record (`repo.start_job` / `repo.finish_job`)
-  for auditability.
-- **Processing** (`core/processing/`) — shared, stateless rule logic: technicals
-  (SMA/RS/52-week range), event classification, results classification, sector mapping,
-  symbol master resolution. This is where "rule-based, not ML" actually lives.
-- **Database** — local SQLite at `data_store/market.db` (SQLAlchemy models in
-  `core/db/models.py`, engine/session in `core/db/engine.py`). Override with
-  `MID_DATABASE_URL` env var (e.g. for a future Postgres backend).
-- **Contracts** (`data/contracts.py`) — the **only** read bridge between the DB and the
-  UI. All `st.cache_data`-decorated getters live here, including the "Daily Opportunity
-  Hub" derivation (`opportunity_hub()`), which computes priority (A/B/C), action
-  (Ready/Research/Watch/Avoid), and a plain-English "why not" — all as pure functions
-  over already-computed fields (`_conditions`, `_priority`, `_action` etc. in that file).
-  This derivation is display-only re-ranking; it introduces no new data or scoring.
-- **Dashboard** (`app.py`, `pages/`, `components.py`) — Streamlit pages. Strictly
-  read-only: pages call `data/contracts.py` getters and render; they never touch
-  connectors, pipelines, or the DB directly. Adding a page = one import + one line in
-  the `PAGES` dict in `app.py`.
+## 9. Files That Should Never Be Modified Automatically
 
-### Central configuration (`core/config.py`)
+- `data_store/*.db` (`market.db`, `market_v2.db`) — generated by pipelines; hand-editing
+  breaks provenance/job-record auditability. Gitignored.
+- `reports/*` — generated artifacts, overwritten on each pipeline run. Gitignored.
+- `logs/*` — runtime logs. Gitignored.
+- `intelligence_v2/database/v1_reference.py`'s read-only connection logic — this is a
+  hard safety boundary (SQLite `mode=ro`), not a convenience wrapper; do not "simplify"
+  it into a normal read-write connection.
+- `.streamlit/secrets.toml` (if ever created) — never commit; already gitignored.
+- `__pycache__/`, `.pytest_cache/` — build/tool cache, regenerated automatically.
 
-Every tunable threshold — watchlist trigger sizes, technical bands (SMA period, RS
-strong/weak %, 52-week breakout distance), sector index/basket mappings, corporate-action
-keyword rules and impact/priority tags, results growth thresholds — lives in this one
-file. When asked to tune behavior ("make RS stricter", "add a new corporate-action
-keyword"), this is almost always the file to change, not the processing logic.
+## 10. Future Roadmap
 
-Corporate-action classification (`EVENT_TYPE_RULES`) is an **ordered** list of
-(event_type, keywords) — the first matching keyword wins, so order matters for
-overlapping phrases (e.g. "rights"/"preferential" must be checked before a generic
-"fund rais" match).
+V1 (this dashboard) is considered **frozen** — active design work is happening in
+`docs/`, not yet in code:
 
-### Offline mode
+- `docs/V2_PRODUCT_REQUIREMENTS.md` — product definition for the V2 expansion.
+- `docs/V2_ADVANCED_INTELLIGENCE_ROADMAP.md` — technical architecture for Sector
+  Intelligence / Market Cycle / Position / Bearish engines (design only, partially
+  implemented so far as `run_v2_sector_intelligence.py` / `run_v2_market_cycle.py`).
+- `docs/V2_DATA_INTEGRATION_PLAN.md`, `docs/V2_IMPLEMENTATION_PLAN.md` — supporting plans.
 
-`OFFLINE_MODE` (env `MID_OFFLINE`, default `"1"`) makes connectors skip the network and
-return deterministic seeded data (`seed/seed_data.py`, `data/sample_data.py`) instead.
-This is the default so the pipeline always runs reproducibly without live credentials;
-set `MID_OFFLINE=0` to attempt real NSE/BSE/yfinance fetches (falling back to seed data
-on failure).
-
-### V1 vs. V2 — two isolated subsystems, one dashboard
-
-`intelligence_v2/` is a second-generation subsystem (Sector Intelligence, Market Cycle
-classification) built as a **deliberately isolated add-on**, not a replacement:
-
-- It has its own database (`data_store/market_v2.db`), own config, own logger
-  (`logs/v2_backend.log`), own settings (`intelligence_v2/config/settings.py`) — nothing
-  in `intelligence_v2/` imports from `core.*` (V1), by design.
-- The **only** place V2 is permitted to touch V1's database is
-  `intelligence_v2/database/v1_reference.py`, and only read-only. This isn't just a
-  convention: the connection is opened with SQLite's `file:...?mode=ro` URI, so any
-  write attempt fails at the SQLite/OS level regardless of what calling code asks for.
-  `verify_read_only()` in that module actively proves this by attempting (and expecting
-  the rejection of) a `CREATE TABLE` through the bridge.
-- V2 pipelines (`run_v2_sector_intelligence.py`, `run_v2_market_cycle.py`) read V1 data
-  as their primary input (e.g. V1's `sector_rotation` table) but only ever write to
-  `market_v2.db`. `run_v2_sector_intelligence.py` must run before `run_v2_market_cycle.py`.
-- V2 pages (`intelligence_v2/pages/`) are wired into the same `app.py` `PAGES` dict as
-  V1 pages — from the user's perspective it's one dashboard, but the codebases and data
-  stores never mix.
-- If you touch `intelligence_v2/`, do not add a `core.*` import — keep the isolation
-  boundary intact. If you touch `core/db/models.py` schema, it has no effect on
-  `market_v2.db` and vice versa.
-
-### Reports
-
-`run_combined.py`, `run_corp_actions.py`, `run_institutional.py`, `run_results.py`, and
-`run_validation.py` each also write dated markdown/CSV reports into `reports/` (via
-`core/reports.py`) as a side effect — these are generated artifacts, not source, and are
-overwritten/added to on each run rather than hand-edited.
+Known gaps worth addressing (inferred from the current codebase, not a commitment):
+a V1 test suite doesn't exist yet; `MID_DATABASE_URL` suggests a future Postgres
+backend but SQLite is the only implementation today; the Task Scheduler-based daily
+run (`run_daily_scheduled.ps1`) is Windows-only, worth revisiting after the workspace
+migration to `D:\Projects`.

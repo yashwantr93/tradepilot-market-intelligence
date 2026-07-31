@@ -7,6 +7,17 @@
 [client]
 showSidebarNavigation = false
 
+[server]
+# Safe in every environment: headless (no auto-opening a local browser) and
+# bound to all interfaces (required for Render/any container platform to
+# reach the process; harmless for local use, still reachable at localhost).
+# Port is intentionally left unset here — it's passed explicitly per
+# environment (--server.port 8531 locally via .claude/launch.json,
+# --server.port $PORT on Render via render.yaml) since config.toml cannot
+# read environment variables.
+headless = true
+address = "0.0.0.0"
+
 [theme]
 base = "dark"
 primaryColor = "#2563eb"

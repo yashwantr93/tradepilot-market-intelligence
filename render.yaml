@@ -1,0 +1,43 @@
+# Render Blueprint — one web service, one disk. Deploying this (Render
+# Dashboard → New → Blueprint, pointing at this repo) is a decision for you;
+# nothing here runs anything until you connect and deploy it.
+#
+# ARCHITECTURE (deliberately the simplest fit for a personal project):
+# The dashboard AND the daily pipeline refresh run inside this ONE service,
+# sharing this ONE disk. The refresh is triggered by an in-process scheduler
+# (scheduler.py) started by app.py itself when MID_ENABLE_SCHEDULER=1 — not
+# a separate Render Cron Job. Render persistent disks attach to exactly one
+# service, so a separate cron service would need its own disk and could
+# never see this one; keeping everything in one service sidesteps that
+# entirely, with no extra infrastructure. See DEPLOYMENT.md for the full
+# architecture diagram and rationale.
+
+services:
+  - type: web
+    name: tradepilot-ai
+    runtime: python
+    plan: starter
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      streamlit run app.py
+      --server.port $PORT
+      --server.address 0.0.0.0
+      --server.headless true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: MID_DATA_DIR
+        value: /var/data/tradepilot
+      - key: MID_LOGS_DIR
+        value: /var/data/tradepilot/logs
+      - key: MID_OFFLINE
+        value: "0"
+      - key: MID_ENABLE_SCHEDULER
+        value: "1"
+      - key: MID_SCHEDULER_UTC_TIME
+        value: "14:30"
+    disk:
+      name: tradepilot-data
+      mountPath: /var/data/tradepilot
+      sizeGB: 1

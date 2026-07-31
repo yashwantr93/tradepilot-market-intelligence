@@ -34,11 +34,27 @@ SLATE_LIGHT = (100, 116, 139, 255)   # #64748B — subtitle on light backgrounds
 SLATE_DARK = (148, 163, 184, 255)    # #94A3B8 — subtitle on dark backgrounds
 BLUE_BRIGHT = (59, 130, 246, 255)    # #3B82F6 — candle 2 on dark backgrounds
 
-_FONT_DIR = Path(r"C:\Windows\Fonts")
+# Common system font directories, checked in order — this script only ever
+# runs manually (regenerating already-committed assets), never at app
+# runtime, but shouldn't assume Windows.
+_FONT_DIR_CANDIDATES = [
+    Path(r"C:\Windows\Fonts"),                    # Windows
+    Path("/usr/share/fonts/truetype/dejavu"),      # Linux (Debian/Ubuntu, common on Render)
+    Path("/usr/share/fonts/truetype/liberation"),  # Linux (RHEL/Fedora-family)
+    Path("/System/Library/Fonts"),                 # macOS
+    Path("/Library/Fonts"),                        # macOS (user-installed)
+]
 
 
 def _font(name: str, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(_FONT_DIR / name), size)
+    for font_dir in _FONT_DIR_CANDIDATES:
+        candidate = font_dir / name
+        if candidate.exists():
+            return ImageFont.truetype(str(candidate), size)
+    raise FileNotFoundError(
+        f"Could not find font {name!r} in any known font directory "
+        f"({[str(d) for d in _FONT_DIR_CANDIDATES]}). This script regenerates "
+        "already-committed brand assets and is not required to run the app.")
 
 # Base design canvas the geometry below is expressed in (512x512), matching
 # logo-mark.svg 1:1. Rendered at higher supersampling then downscaled for

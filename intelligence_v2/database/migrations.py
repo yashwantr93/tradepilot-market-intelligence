@@ -23,6 +23,9 @@ _VERSION_NOTES = {
     1: "Phase 0 — Foundation (package skeleton, V2 DB, V1 read-only bridge, health checks).",
     2: "Phase 1 — Sector Intelligence (sector_intelligence_daily table).",
     3: "Phase 2 — Market Cycle Engine (market_cycle_daily + market_cycle_transitions).",
+    4: "Phase 3 — Early Momentum Engine (early_momentum_daily).",
+    5: "Phase 4 — Bearish Opportunity Engine (bearish_opportunity_daily).",
+    6: "Phase 5 — Position Opportunity Engine (position_opportunity_daily).",
 }
 
 

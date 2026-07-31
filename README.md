@@ -104,6 +104,13 @@ and reload the page to refresh.
 
 ---
 
+## Deploying
+
+This README covers local development. For deploying to Render (persistent
+disk, environment variables, scheduling), see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
 ## Guarantees
 
 - **No AI. No ML. No probabilistic scoring. No hidden ranking.**

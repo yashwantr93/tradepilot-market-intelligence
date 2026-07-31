@@ -6,3 +6,7 @@ SQLAlchemy>=2.0.0
 requests>=2.31.0
 # Optional live price source; backend falls back to seeded data if absent.
 yfinance>=0.2.40
+# Used by scripts/generate_brand_assets.py (regenerates already-committed
+# brand assets) — not on the running app's import path, but a real project
+# dependency, so it belongs here for a reproducible environment.
+Pillow>=10.0.0

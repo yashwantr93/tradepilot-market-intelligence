@@ -11,8 +11,11 @@ exist yet.
 """
 
 from intelligence_v2.models.base import Base, SchemaVersion  # noqa: F401
+from intelligence_v2.models.bearish_opportunity import BearishOpportunityDaily  # noqa: F401
+from intelligence_v2.models.early_momentum import EarlyMomentumDaily  # noqa: F401
 from intelligence_v2.models.market_cycle import (  # noqa: F401
     MarketCycleDaily,
     MarketCycleTransition,
 )
+from intelligence_v2.models.position_opportunity import PositionOpportunityDaily  # noqa: F401
 from intelligence_v2.models.sector_intelligence import SectorIntelligenceDaily  # noqa: F401

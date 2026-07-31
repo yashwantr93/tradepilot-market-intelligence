@@ -8,6 +8,13 @@ a given day) — the exact same equal-weighted-basket technique V1's own
 `core/processing/market_data.py::get_basket_series` uses, reimplemented here
 as independent V2 code reading from V1's stored table instead of calling
 yfinance fresh. No new external connector was needed for this phase.
+
+REFACTORED (shared Relative Strength Engine, mandatory defect fix): every
+close series fetched here now passes through the shared sanitiser before use.
+V1's stored `price_history` contains isolated corrupt closes (e.g. NIFTY 50
+printing 16,848 between two ~24,000 closes) which previously flowed completely
+unfiltered into every sector's basket average and the benchmark series —
+Phase 3 found and fixed the identical defect; this applies that same fix here.
 """
 
 from __future__ import annotations
@@ -20,13 +27,18 @@ from intelligence_v2.config.sectors import (
     SECTOR_BASKETS,
 )
 from intelligence_v2.database.v1_reference import read_v1
+from intelligence_v2.processors.shared_relative_strength import (
+    sanitize_benchmark_series,
+    sanitize_close_series,
+)
 from intelligence_v2.utils.logging_v2 import get_v2_logger
 
 log = get_v2_logger("processors.sector_prices")
 
 
 def _get_closes(symbols: list[str]) -> dict[str, pd.Series]:
-    """Bulk-fetch close series for multiple symbols in one V1 read."""
+    """Bulk-fetch close series for multiple symbols in one V1 read, sanitised
+    against isolated corrupt closes (see module docstring)."""
     if not symbols:
         return {}
     placeholders = {f"s{i}": sym for i, sym in enumerate(symbols)}
@@ -38,9 +50,22 @@ def _get_closes(symbols: list[str]) -> dict[str, pd.Series]:
         return {}
     df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
     out = {}
+    total_dropped = 0
     for sym, g in df.groupby("symbol"):
         s = g.set_index("trade_date")["close"].sort_index()
+        # The benchmark gets the wider, benchmark-specific window (see
+        # shared_relative_strength.BENCHMARK_SANITIZE_WINDOW) — every other
+        # symbol keeps the untouched default, preserving existing behaviour
+        # for the rest of the universe.
+        if sym == NIFTY_BENCHMARK_SYMBOL:
+            s, dropped = sanitize_benchmark_series(s)
+        else:
+            s, dropped = sanitize_close_series(s)
+        total_dropped += dropped
         out[sym] = s
+    if total_dropped:
+        log.warning("Data hygiene: dropped %d corrupt close(s) across %d symbol(s) "
+                   "in this batch.", total_dropped, len(symbols))
     return out
 
 
