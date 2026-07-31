@@ -35,7 +35,15 @@ logs/*.log
 *.log
 
 # --- Databases (generated data, not source) ---
+# EXCEPTION: market.db / market_v2.db are deliberately tracked — Render Free
+# has no persistent disk, so the deployed service serves a read-only copy of
+# whichever snapshot was last committed and pushed, exactly how the
+# yashwantr93/crypto-intel project tracks crypto_intel.db. See DEPLOYMENT.md
+# "Refreshing production data". Any OTHER file in data_store/ (test
+# artifacts, local experiments) stays ignored.
 data_store/*.db
+!data_store/market.db
+!data_store/market_v2.db
 data_store/*.sqlite
 data_store/*.sqlite3
 
