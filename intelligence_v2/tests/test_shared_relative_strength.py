@@ -35,6 +35,7 @@ from intelligence_v2.processors.shared_relative_strength import (
     is_outperforming,
     performance_between_dates,
     performance_over,
+    position_at_or_after,
     position_at_or_before,
     rs_as_of,
     sanitize_benchmark_series,
@@ -398,3 +399,39 @@ def test_benchmark_only_fix_does_not_change_the_default_per_stock_window():
     import inspect as _inspect
     sig = _inspect.signature(sanitize_close_series)
     assert sig.parameters["window"].default == DEFAULT_SANITIZE_WINDOW
+
+
+# ---------------------------------------------------------------------------
+# position_at_or_after — added Phase 3 (Market Reaction) for event-relative
+# forward-looking lookups. Mirror of position_at_or_before.
+# ---------------------------------------------------------------------------
+def test_position_at_or_after_exact_match():
+    dates = _dates(10)
+    assert position_at_or_after(dates, dates[5]) == 5
+
+
+def test_position_at_or_after_weekend_resolves_to_next_session():
+    """An event date that isn't itself a trading day (e.g. a weekend
+    announcement) must resolve FORWARD to the next available session, never
+    backward — the market's first chance to react."""
+    trading_days = [dt.date(2026, 1, 2), dt.date(2026, 1, 5), dt.date(2026, 1, 6)]  # Fri, Mon, Tue
+    weekend_event = dt.date(2026, 1, 3)  # Saturday
+    pos = position_at_or_after(trading_days, weekend_event)
+    assert trading_days[pos] == dt.date(2026, 1, 5)  # resolves to Monday, not back to Friday
+
+
+def test_position_at_or_after_none_when_event_is_after_all_data():
+    dates = _dates(5)
+    assert position_at_or_after(dates, dates[-1] + dt.timedelta(days=10)) is None
+
+
+def test_position_at_or_after_empty_index():
+    assert position_at_or_after([], dt.date(2026, 1, 1)) is None
+
+
+def test_position_at_or_after_and_before_agree_on_an_actual_trading_day():
+    """On a date that IS itself in the index, both directions must resolve
+    to the very same position — no off-by-one drift between the two."""
+    dates = _dates(10)
+    d = dates[4]
+    assert position_at_or_after(dates, d) == position_at_or_before(dates, d) == 4

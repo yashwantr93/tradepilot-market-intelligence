@@ -25,20 +25,34 @@ around them:
 ```
   Local machine (data producer)                Render Free (read-only serving)
   ─────────────────────────────                ───────────────────────────────
-  Windows Task Scheduler / manual run           Web Service "tradepilot-ai"
-    ├─ run_daily.py       (V1 pipelines)          streamlit run app.py
-    └─ run_daily_v2.py    (V2 pipelines)             --server.port $PORT
-          │                                          --server.address 0.0.0.0
-          ▼
-  data_store/market.db                         scheduler.py: DISABLED
-  data_store/market_v2.db                       (MID_ENABLE_SCHEDULER=0 —
-          │                                       the cloud instance never
-          │  git add + commit + push             runs pipelines itself)
-          ▼                                              ▲
+  Windows Task Scheduler                        Web Service "tradepilot-ai"
+  (SwingTradingIntelligence_DailyRun)              streamlit run app.py
+    └─ run_daily_all.py                               --server.port $PORT
+         (Phase 11 — chains, in order:                --server.address 0.0.0.0
+          V1 → V2 → Event Intelligence
+          in ONE command; supersedes the
+          old separate run_daily.py +
+          run_daily_v2.py calls below)
+          │                                    scheduler.py: DISABLED
+          ▼                                     (MID_ENABLE_SCHEDULER=0 —
+  data_store/market.db                          the cloud instance never
+  data_store/market_v2.db                        runs pipelines itself)
+          │                                              ▲
+          │  git add + commit + push                     │
+          ▼                                              │
   GitHub (main branch)  ──────── autoDeploy ─────────────┘
                                  (git checkout delivers the
-                                  shipped .db files fresh)
+                                  shipped .db + latest CODE fresh —
+                                  both travel together in one push)
 ```
+
+**Two separate things travel together on every push, and both must be
+current**: the application CODE (every `.py` file — pages, pipelines,
+`event_intelligence/`) and the two DATA files (`market.db`/`market_v2.db`).
+A push that updates only the data without the matching code (or vice versa)
+still leaves production out of sync with what was verified locally — see
+`refresh_status()`'s production-snapshot notice (Settings page) for the
+signal to watch for this.
 
 The V1/V2 read-only bridge (`intelligence_v2/database/v1_reference.py`,
 SQLite `mode=ro` URI) is completely unaffected by this pattern — both files
@@ -51,9 +65,10 @@ change to that "hard safety boundary" was needed or made.
 | Component | Where | Notes |
 |---|---|---|
 | Streamlit dashboard | Render Free web service | `streamlit run app.py`, unchanged |
-| Daily pipeline refresh | **Your local machine only** | `run_daily.py` + `run_daily_v2.py`, exactly as before |
+| Daily pipeline refresh | **Your local machine only** | `run_daily_all.py` (Phase 11) via the Windows Task Scheduler entry `SwingTradingIntelligence_DailyRun` |
 | `market.db` / `market_v2.db` | Committed to git, shipped with every deploy | Read-only in the cloud |
 | In-process scheduler (`scheduler.py`) | Present in the codebase, **disabled** in the cloud | `MID_ENABLE_SCHEDULER=0` — has no job to do here |
+| Deployment-mode indicator | Every primary page + Settings | `core.config.IS_RENDER` (Phase 15) — reads Render's own `RENDER=true` env var to label the freshness badge as a static snapshot on production, never on local |
 
 ## The new workflow
 
@@ -61,15 +76,19 @@ change to that "hard safety boundary" was needed or made.
 Local refresh  →  git commit  →  git push  →  Render auto-deploy
 ```
 
-1. **Local refresh** — run the pipelines on your machine, same as always:
+1. **Local refresh** — run the full pipeline chain on your machine (Phase 11's
+   unified orchestrator; the Windows Task Scheduler entry already does this
+   nightly, so this step is usually already done for you):
    ```bash
-   python run_daily.py
-   python run_daily_v2.py
+   python run_daily_all.py
    ```
-2. **Git commit** — stage and commit the two refreshed database files:
+2. **Git commit** — stage and commit BOTH the refreshed database files AND
+   any pending code changes (check `git status` first — data and code
+   deploy together, and shipping data alone while code changes sit
+   uncommitted leaves production on stale code even with fresh data):
    ```bash
-   git add data_store/market.db data_store/market_v2.db
-   git commit -m "Data refresh"
+   git add data_store/market.db data_store/market_v2.db <any changed code>
+   git commit -m "Data + code refresh"
    ```
 3. **Git push**:
    ```bash
@@ -77,7 +96,11 @@ Local refresh  →  git commit  →  git push  →  Render auto-deploy
    ```
 4. **Render auto-deploy** — `render.yaml` sets `autoDeploy: true`, so Render
    detects the push and redeploys automatically (~2 minutes), delivering the
-   fresh snapshot. No manual action needed on Render's side.
+   fresh snapshot and the latest code together. No manual action needed on
+   Render's side.
+5. **Verify** — open the deployed URL → ⚙️ Settings → confirm the "Build"
+   commit SHA matches `git log -1 --format=%h` locally, and the freshness
+   badge's reference date matches step 1's run date.
 
 Production data freshness = whenever you last did steps 1–3. This is the
 same trade-off Crypto Intel already runs with in production — there is no

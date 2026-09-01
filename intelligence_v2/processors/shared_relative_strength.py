@@ -133,6 +133,25 @@ def position_at_or_before(index, as_of: dt.date) -> int | None:
     return pos if pos >= 0 else None
 
 
+def position_at_or_after(index, as_of: dt.date) -> int | None:
+    """Integer position of the EARLIEST entry in `index` that is >= as_of —
+    the mirror of `position_at_or_before`.
+
+    Added for event-relative (forward-looking) measurement: given an event
+    date that may fall on a non-trading day, this finds the first trading
+    session on or after it — the market's first real opportunity to react —
+    rather than the session before, which already happened. Used by
+    `event_intelligence/` (Phase 3, Market Reaction) as the anchor for
+    "session 0"; kept here rather than duplicated, per this module's own
+    "no phase computes date-alignment independently" rule.
+    """
+    dates = list(index)
+    if not dates:
+        return None
+    pos = bisect.bisect_left(dates, as_of)
+    return pos if pos < len(dates) else None
+
+
 def performance_over(series: pd.Series, pos: int, lookback_days: int) -> float | None:
     """% change from `lookback_days` POSITIONS before `pos` to `pos`, within
     ONE series. Safe to use standalone only when both ends are measured on the

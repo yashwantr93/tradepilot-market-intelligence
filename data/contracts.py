@@ -12,6 +12,7 @@ All getters are cached (short TTL) for snappy navigation.
 from __future__ import annotations
 
 import datetime as dt
+import json
 
 import pandas as pd
 import streamlit as st
@@ -528,3 +529,392 @@ def recent_job_runs(limit: int = 10) -> pd.DataFrame:
         "status, rows_in, rows_out, error FROM job_runs "
         "ORDER BY started_at DESC LIMIT :limit", {"limit": limit})
     return df
+
+
+# ---------------------------------------------------------------------------
+# Freshness rollup — Phase 11
+# ---------------------------------------------------------------------------
+# job_name -> the stage it corresponds to, for the "did the job that would
+# have produced this stage's data actually succeed" check. Not every stage
+# has a 1:1 job (V2 stages live in a separate database and are reported
+# separately by the Settings page via intelligence_v2.contracts), and a
+# stage can be missing from job_runs entirely if it has literally never run
+# — both are treated explicitly below, never silently ignored.
+_STAGE_JOBS = {
+    "price_history": "price_ingestion",
+    "corporate_actions": "corp_actions_ingestion",
+    "event_market_reaction": "market_reaction",
+    "event_trade_signal": "trade_signals",
+    "sector_theme_state": "sector_theme",
+    "sector_stock_cross_reference": "cross_reference",
+    "opportunity": "opportunity_intelligence",
+}
+# (table, date_col, kind) per stage, in the pipeline's actual dependency
+# order — see the Phase 11 report's DEPENDENCY FLOW section.
+#
+# kind="snapshot": the date column is a genuine as-of/trade date (one row
+# set per calendar day) — "current" means that date equals the reference
+# date, exactly like sector_stock_cross_reference's existing latest-only
+# accessor already assumes.
+#
+# kind="event": the date column is a REAL-WORLD EVENT date (an
+# announcement_date), which can legitimately be *ahead* of today (corporate
+# actions are sometimes announced with a forward ex-date/record-date) or
+# behind it by any number of days (a quiet week with no announcements is
+# not staleness). Comparing an event date to the trading-calendar reference
+# date is comparing two different calendars — Phase 11's own verification
+# caught this producing false "not current" flags on corporate_actions/
+# event_market_reaction/event_trade_signal even on a run that had in fact
+# just completed successfully. "current" for these is instead: did the job
+# that populates this stage last run on/after the reference date and
+# succeed — a job-recency check, not a data-date check.
+_STAGE_DATES = {
+    "price_history": ("price_history", "trade_date", "snapshot"),
+    "corporate_actions": ("corporate_actions", "announcement_date", "event"),
+    "event_market_reaction": ("event_market_reaction", "announcement_date", "event"),
+    "event_trade_signal": ("event_trade_signal", "announcement_date", "event"),
+    "sector_theme_state": ("sector_theme_state", "as_of_date", "snapshot"),
+    "sector_stock_cross_reference": ("sector_stock_cross_reference", "as_of_date", "snapshot"),
+    "opportunity": ("opportunity", "as_of_date", "snapshot"),
+}
+# A stale calendar reference (nothing meaningfully refreshed in this many
+# days) — generous enough to cover a weekend + one missed weekday run
+# without manual intervention flagging it as an emergency.
+_STALE_AFTER_DAYS = 4
+
+
+@st.cache_data(ttl=60)
+def refresh_status() -> dict:
+    """Rolls today's data up into one of CURRENT / PARTIALLY_REFRESHED /
+    STALE / FAILED — Phase 11. Deliberately never uses "the process exited
+    0" as the signal: it compares each stage's actual latest stored date
+    against `price_history`'s (the pipeline's base layer) latest date, and
+    separately checks each stage's own most recent job_runs status/error —
+    a stage whose job errored is FAILED even if its data happens to still
+    look present, and a stage that is quietly behind the base layer is
+    PARTIALLY_REFRESHED even if every job "succeeded" (exit 0), e.g. V1
+    current + an Event Intelligence stage stale must never be reported as
+    fully current — see the Phase 11 report's FRESHNESS STATUS section.
+
+    V2 (a separate database, `market_v2.db`) is intentionally NOT rolled
+    into this single status — V1/V2 isolation means this module cannot
+    import intelligence_v2, and the Settings page already reports V2's own
+    freshness directly via `intelligence_v2.contracts`. Callers wanting a
+    single-glance "is everything current" answer must consult both.
+
+    Returns {"status": ..., "reference_date": ..., "stages": [...],
+    "reasons": [...]}."""
+    reference_date = latest_date("price_history", "trade_date")
+    if reference_date is None:
+        return {"status": "FAILED", "reference_date": None, "stages": [],
+               "reasons": ["No price_history data at all — the base layer has never run."]}
+
+    today = dt.date.today()
+    age_days = (today - reference_date).days
+
+    jobs = recent_job_runs(limit=200)
+    latest_job_by_name: dict[str, pd.Series] = {}
+    if not jobs.empty:
+        for name, grp in jobs.groupby("job_name"):
+            latest_job_by_name[name] = grp.iloc[0]  # already DESC by started_at
+
+    stages = []
+    reasons = []
+    any_failed = False
+    any_behind = False
+
+    for stage_name, (table, date_col, kind) in _STAGE_DATES.items():
+        stage_date = latest_date(table, date_col)
+        job_name = _STAGE_JOBS.get(stage_name)
+        job_row = latest_job_by_name.get(job_name) if job_name else None
+
+        job_status = str(job_row["status"]) if job_row is not None else None
+        job_errored = job_status == "error"
+        job_ran_recently = (
+            job_row is not None
+            and pd.notna(job_row["started_at"])
+            and pd.Timestamp(job_row["started_at"]).date() >= reference_date
+        )
+
+        if job_errored:
+            any_failed = True
+            reasons.append(f"{stage_name}: last job_runs entry for '{job_name}' errored "
+                           f"({job_row['error']}).")
+            is_current = False
+        elif kind == "snapshot":
+            if stage_date is None:
+                any_behind = True
+                reasons.append(f"{stage_name}: no data has ever been stored.")
+                is_current = False
+            elif stage_date < reference_date:
+                any_behind = True
+                reasons.append(f"{stage_name}: latest stored date {stage_date} is behind "
+                               f"the price_history reference date {reference_date}.")
+                is_current = False
+            else:
+                is_current = stage_date == reference_date
+        else:  # kind == "event" — job recency, not event-date comparison (see above)
+            if job_row is None:
+                any_behind = True
+                reasons.append(f"{stage_name}: no job_runs entry — this stage has never run.")
+                is_current = False
+            elif not job_ran_recently:
+                any_behind = True
+                reasons.append(f"{stage_name}: last '{job_name}' run ({job_row['started_at']}) "
+                               f"predates the price_history reference date {reference_date}.")
+                is_current = False
+            else:
+                is_current = True
+
+        stages.append({
+            "stage": stage_name, "latest_date": stage_date,
+            "job_status": job_status,
+            "current": is_current,
+        })
+
+    if age_days > _STALE_AFTER_DAYS:
+        status = "STALE"
+        reasons.insert(0, f"price_history's own latest date ({reference_date}) is "
+                          f"{age_days} days old — nothing meaningful appears to have "
+                          f"refreshed recently, regardless of individual job exit codes.")
+    elif any_failed:
+        status = "FAILED"
+    elif any_behind:
+        status = "PARTIALLY_REFRESHED"
+    else:
+        status = "CURRENT"
+
+    return {"status": status, "reference_date": reference_date, "stages": stages, "reasons": reasons}
+
+
+# ---------------------------------------------------------------------------
+# Event Intelligence bridge — Phase 12C
+# ---------------------------------------------------------------------------
+# Read-only, same _read()/cache_data pattern as every getter above.
+# `event_intelligence/` (Phases 1-10) writes into this same market.db — it is
+# not part of V1's `core/` or V2's `intelligence_v2/` (see
+# event_intelligence/__init__.py for why bridging both is allowed there),
+# so exposing its tables here is the SAME bridge, not a new one: this module
+# remains "the ONLY read bridge between the DB and the UI" per CLAUDE.md.
+# No new computation happens in this section — every function is a
+# read + optional latest-snapshot filter over an already-computed table.
+
+
+def _one(df: pd.DataFrame) -> dict | None:
+    """First row of a lookup as a plain dict, or None if empty — the
+    consistent "not found / UNKNOWN" signal every getter below returns
+    rather than fabricating a placeholder row."""
+    return df.iloc[0].to_dict() if not df.empty else None
+
+
+def _json_list(row: dict | None, field: str) -> list[str]:
+    if not row or not row.get(field):
+        return []
+    try:
+        return json.loads(row[field])
+    except (TypeError, ValueError):
+        return []
+
+
+@st.cache_data(ttl=120)
+def opportunities(direction: str | None = None, tier: str | None = None,
+                  opportunity_type: str | None = None) -> pd.DataFrame:
+    """Latest as_of_date snapshot only — mirrors
+    `core.db.repository.get_latest_opportunities()`'s established pattern
+    (same snapshot-table shape as sector_stock_cross_reference).
+
+    Left-joins `corporate_actions.announcement_date` (Phase 14) purely for
+    display — when the SAME symbol carries multiple opportunity rows (one
+    per qualifying event), the UI needs the event date to distinguish them
+    for a trader; nothing else about the join changes what `opportunity`
+    itself computed."""
+    d = latest_date("opportunity", "as_of_date")
+    if d is None:
+        return pd.DataFrame()
+    sql = ("SELECT o.*, ca.announcement_date "
+          "FROM opportunity o LEFT JOIN corporate_actions ca "
+          "ON o.corporate_action_id = ca.id WHERE o.as_of_date = :d")
+    params: dict = {"d": d.isoformat()}
+    if direction:
+        sql += " AND o.direction = :dir"
+        params["dir"] = direction
+    if tier:
+        sql += " AND o.tier = :tier"
+        params["tier"] = tier
+    if opportunity_type:
+        sql += " AND o.opportunity_type = :ot"
+        params["ot"] = opportunity_type
+    return _read(sql, params)
+
+
+@st.cache_data(ttl=120)
+def opportunity_by_symbol(symbol: str) -> pd.DataFrame:
+    """Every opportunity row for this symbol in the latest snapshot (usually
+    0 or 1 — a symbol rarely has two live opportunities at once)."""
+    df = opportunities()
+    return df[df["symbol"] == symbol] if not df.empty else df
+
+
+@st.cache_data(ttl=120)
+def opportunity_by_action(corporate_action_id: int) -> dict | None:
+    return _one(_read("SELECT * FROM opportunity WHERE corporate_action_id = :id "
+                      "ORDER BY as_of_date DESC LIMIT 1", {"id": corporate_action_id}))
+
+
+@st.cache_data(ttl=120)
+def event_reaction_by_action(corporate_action_id: int) -> dict | None:
+    return _one(_read("SELECT * FROM event_market_reaction WHERE corporate_action_id = :id",
+                      {"id": corporate_action_id}))
+
+
+@st.cache_data(ttl=120)
+def trade_signal_by_action(corporate_action_id: int) -> dict | None:
+    return _one(_read("SELECT * FROM event_trade_signal WHERE corporate_action_id = :id",
+                      {"id": corporate_action_id}))
+
+
+@st.cache_data(ttl=120)
+def materiality_by_action(corporate_action_id: int) -> dict | None:
+    return _one(_read("SELECT * FROM corporate_action_materiality WHERE corporate_action_id = :id",
+                      {"id": corporate_action_id}))
+
+
+@st.cache_data(ttl=120)
+def expectation_for(symbol: str, period_end: dt.date) -> dict | None:
+    return _one(_read("SELECT * FROM event_expectations WHERE symbol = :s AND period_end = :p "
+                      "ORDER BY id DESC LIMIT 1", {"s": symbol, "p": period_end.isoformat()}))
+
+
+@st.cache_data(ttl=120)
+def corporate_action_by_id(corporate_action_id: int) -> dict | None:
+    return _one(_read("SELECT * FROM corporate_actions WHERE id = :id",
+                      {"id": corporate_action_id}))
+
+
+@st.cache_data(ttl=120)
+def corporate_actions_with_signal(since: dt.date | None = None) -> pd.DataFrame:
+    """Events page's list view: every corporate action, left-joined with its
+    materiality tier, trade signal (direction/strength), and opportunity
+    (tier), where they exist. Small tables (hundreds of rows) — plain
+    pandas merge, no new SQL joins added to the DB layer."""
+    ca = corporate_actions(since)
+    if ca.empty:
+        return ca
+    mat = _read("SELECT corporate_action_id, materiality_tier FROM corporate_action_materiality")
+    sig = _read("SELECT corporate_action_id, direction, signal_strength, "
+               "market_reaction_state FROM event_trade_signal")
+    opp = _read("SELECT corporate_action_id, tier, opportunity_type FROM opportunity")
+    df = ca
+    for extra in (mat, sig, opp):
+        if not extra.empty:
+            df = df.merge(extra, left_on="id", right_on="corporate_action_id", how="left") \
+                   .drop(columns=["corporate_action_id"], errors="ignore")
+    return df
+
+
+@st.cache_data(ttl=120)
+def sector_theme_latest() -> pd.DataFrame:
+    """Latest as_of_date snapshot only — mirrors
+    `core.db.repository.get_latest_sector_theme_state()`."""
+    d = latest_date("sector_theme_state", "as_of_date")
+    if d is None:
+        return pd.DataFrame()
+    return _read("SELECT * FROM sector_theme_state WHERE as_of_date = :d "
+                 "ORDER BY sector_or_theme", {"d": d.isoformat()})
+
+
+@st.cache_data(ttl=120)
+def sector_theme_history(sector_or_theme: str, lookback: int = 30) -> pd.DataFrame:
+    """Recent daily history for one sector/theme — powers a trend view under
+    the Sector & Theme drill-down (`days_in_state`/`confirmed_state` over
+    time), oldest first."""
+    return _read(
+        "SELECT * FROM sector_theme_state WHERE sector_or_theme = :s "
+        "ORDER BY as_of_date DESC LIMIT :n", {"s": sector_or_theme, "n": lookback}
+    ).sort_values("as_of_date").reset_index(drop=True)
+
+
+@st.cache_data(ttl=120)
+def cross_reference_latest(sector_or_theme: str | None = None) -> pd.DataFrame:
+    """Latest as_of_date snapshot only — mirrors
+    `core.db.repository.get_latest_sector_stock_cross_reference()`."""
+    d = latest_date("sector_stock_cross_reference", "as_of_date")
+    if d is None:
+        return pd.DataFrame()
+    sql = "SELECT * FROM sector_stock_cross_reference WHERE as_of_date = :d"
+    params: dict = {"d": d.isoformat()}
+    if sector_or_theme:
+        sql += " AND sector_or_theme = :s"
+        params["s"] = sector_or_theme
+    return _read(sql, params)
+
+
+@st.cache_data(ttl=120)
+def cross_reference_for_symbol(symbol: str) -> pd.DataFrame:
+    """Every sector/theme this symbol currently participates in (latest
+    snapshot only) — a symbol can legitimately appear in more than one."""
+    df = cross_reference_latest()
+    return df[df["symbol"] == symbol] if not df.empty else df
+
+
+@st.cache_data(ttl=120)
+def results_for_symbol(symbol: str) -> dict | None:
+    """Latest quarterly result for this symbol from `results_tracker` (V1) —
+    results currently have no `corporate_actions` row of their own (a real,
+    known architecture gap, not something this page invents a workaround
+    for), so this is looked up by symbol directly rather than via an event."""
+    return _one(_read("SELECT * FROM results_tracker WHERE symbol = :s "
+                      "ORDER BY period_end DESC LIMIT 1", {"s": symbol}))
+
+
+def stock_event_detail(symbol: str, corporate_action_id: int | None = None) -> dict:
+    """Assembles the full evidence chain for one stock from every relevant
+    Event Intelligence table. Missing/UNKNOWN pieces are returned as None
+    or empty — NEVER fabricated or defaulted to a value. Pure read-side
+    lookup/join in Python; no new computation, thresholds, or logic.
+
+    `corporate_action_id`: when arriving from Events (a specific catalyst is
+    already known). Left None when arriving from Sector & Theme (only the
+    symbol is known) — in that case the most recent opportunity for this
+    symbol, if any, resolves which event anchors the view.
+    """
+    if corporate_action_id is None:
+        opp_rows = opportunity_by_symbol(symbol)
+        if not opp_rows.empty:
+            corporate_action_id = int(opp_rows.iloc[0]["corporate_action_id"])
+
+    ca = corporate_action_by_id(corporate_action_id) if corporate_action_id else None
+    opp = opportunity_by_action(corporate_action_id) if corporate_action_id else None
+    sig = trade_signal_by_action(corporate_action_id) if corporate_action_id else None
+    reaction = event_reaction_by_action(corporate_action_id) if corporate_action_id else None
+    materiality = materiality_by_action(corporate_action_id) if corporate_action_id else None
+    cross_refs = cross_reference_for_symbol(symbol)
+
+    results_row = results_for_symbol(symbol)
+    expectation = None
+    if results_row and results_row.get("period_end"):
+        expectation = expectation_for(symbol, results_row["period_end"])
+
+    # Evidence prefers the Opportunity synthesis (Phase 8, the most complete
+    # view) and falls back to the underlying trade signal (Phase 5) when no
+    # opportunity was generated for this event (e.g. a NO_TRADE signal).
+    evidence_source = opp or sig
+    evidence_for = _json_list(evidence_source, "evidence_for_json")
+    evidence_against = _json_list(evidence_source, "evidence_against_json")
+    conflicts = _json_list(opp, "conflicts_json")
+
+    return {
+        "symbol": symbol,
+        "corporate_action_id": corporate_action_id,
+        "corporate_action": ca,
+        "opportunity": opp,
+        "signal": sig,
+        "reaction": reaction,
+        "materiality": materiality,
+        "results": results_row,
+        "expectation": expectation,
+        "cross_references": cross_refs.to_dict("records") if not cross_refs.empty else [],
+        "evidence_for": evidence_for,
+        "evidence_against": evidence_against,
+        "conflicts": conflicts,
+    }

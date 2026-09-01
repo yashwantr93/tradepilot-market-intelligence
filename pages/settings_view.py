@@ -10,6 +10,7 @@ tables, filesystem paths) — nothing is computed or inferred.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ import streamlit as st
 
 from components import badge, kpi_card, section_header
 from core.branding import APP_FULL_NAME, APP_VERSION
-from core.config import DATA_STORE_DIR
+from core.config import DATA_STORE_DIR, IS_RENDER
 from data import contracts as v1
 from intelligence_v2.config.settings import CURRENT_SCHEMA_VERSION, V2_DB_PATH
 from intelligence_v2.database.migrations import get_latest_schema_version
@@ -29,6 +30,8 @@ def render() -> None:
     st.caption("Read-only operational status for this personal terminal — no accounts, "
               "no configuration editing.")
 
+    _render_overall_freshness()
+    st.write("")
     _render_database_status()
     st.write("")
     _render_data_freshness()
@@ -36,6 +39,34 @@ def render() -> None:
     _render_scheduler_status()
     st.write("")
     _render_build_info()
+
+
+def _render_overall_freshness() -> None:
+    """Phase 11 — a single rollup answer to "is today's dashboard current",
+    computed from actual stage dates + job status (never "exit code 0"
+    alone). See `data.contracts.refresh_status()`."""
+    section_header("Overall Refresh Status")
+    rs = v1.refresh_status()
+    kind = {"CURRENT": "green", "PARTIALLY_REFRESHED": "amber",
+           "STALE": "amber", "FAILED": "red"}.get(rs["status"], "gray")
+    ref = f" (reference date: {rs['reference_date']})" if rs["reference_date"] else ""
+    st.markdown(badge(f"V1 + Event Intelligence: {rs['status']}{ref}", kind),
+               unsafe_allow_html=True)
+    if rs["status"] != "CURRENT" and rs["reasons"]:
+        with st.expander(f"Why not CURRENT? ({len(rs['reasons'])} reason(s))"):
+            for reason in rs["reasons"]:
+                st.markdown(f"- {reason}")
+    st.caption("V2's freshness is reported separately below (own database) — "
+              "this rollup covers V1 + the Event Intelligence layer only.")
+    if IS_RENDER:
+        st.warning(
+            "📦 **This is the production deployment** — a static, git-shipped "
+            "SQLite snapshot (see DEPLOYMENT.md). It does NOT refresh itself; "
+            "the status above reflects whatever `market.db`/`market_v2.db` "
+            "were last committed and pushed, not live data. To refresh "
+            "production, run the local pipeline, then `git add data_store/"
+            "market.db data_store/market_v2.db && git commit && git push`."
+        )
 
 
 def _render_database_status() -> None:
@@ -108,6 +139,13 @@ def _render_data_freshness() -> None:
                         "Sessions of History": "—"})
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
+    st.markdown("**Event Intelligence** (Phases 3–8, V1 database)")
+    ei_rows = [{"Stage": s["stage"], "Latest Date": str(s["latest_date"] or "No data yet"),
+               "Current": "✅" if s["current"] else "—"}
+              for s in v1.refresh_status()["stages"]
+              if s["stage"] not in ("price_history", "corporate_actions")]
+    st.dataframe(pd.DataFrame(ei_rows), width="stretch", hide_index=True)
+
 
 def _render_scheduler_status() -> None:
     section_header("Scheduler Status")
@@ -118,19 +156,17 @@ def _render_scheduler_status() -> None:
         st.markdown("**V1 pipelines** — recent runs (`job_runs` audit trail)")
         st.dataframe(runs, width="stretch", hide_index=True)
 
-    st.markdown(
-        badge("V2 pipelines: no automated scheduler configured", "amber"),
-        unsafe_allow_html=True)
     st.caption(
-        "V1's `run_daily_scheduled.ps1` (Windows Task Scheduler) refreshes V1 data "
-        "automatically. The five V2 engines (`run_v2_*.py`) must currently be run "
-        "manually, in order: sector_intelligence → market_cycle → early_momentum "
-        "→ bearish_opportunity → position_opportunity.")
+        "`run_daily_scheduled.ps1` (invoked by the local Windows Task Scheduler entry "
+        "\"SwingTradingIntelligence_DailyRun\") now calls `run_daily_all.py`, which "
+        "chains V1 → V2 → Event Intelligence in one command (Phase 11) — see the "
+        "Phase 11 report's SCHEDULER AUDIT section for whether the registered Task "
+        "Scheduler entry itself is currently pointed at the right path.")
 
 
 def _render_build_info() -> None:
     section_header("Build Information")
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         kpi_card("Version", APP_VERSION, delta="Feature-frozen intelligence engine",
                  delta_dir="flat")
@@ -138,6 +174,10 @@ def _render_build_info() -> None:
         commit = _git_commit_short()
         kpi_card("Build", commit or "unknown", delta="git commit", delta_dir="flat")
     with c3:
+        kpi_card("Deployment", "Render (production)" if IS_RENDER else "Local",
+                 delta="Static snapshot" if IS_RENDER else "Live, Task-Scheduler-refreshed",
+                 delta_dir="flat")
+    with c4:
         kpi_card("Data Directory", "data_store/", delta=str(DATA_STORE_DIR),
                  delta_dir="flat")
 
@@ -146,8 +186,16 @@ def _render_build_info() -> None:
 
 
 def _git_commit_short() -> str | None:
-    """Best-effort, read-only git short SHA — returns None if unavailable
-    (e.g. not a git checkout). Never touches git state, only reads HEAD."""
+    """Best-effort, read-only git short SHA. On Render, `RENDER_GIT_COMMIT`
+    (set by the platform itself for every deploy, per Render's documented
+    env vars) is authoritative and preferred over reading `.git/HEAD`
+    locally, since it's guaranteed accurate regardless of whether the
+    deployed filesystem's `.git` directory is intact. Returns None if
+    neither is available (e.g. not a git checkout). Never touches git
+    state, only reads."""
+    render_commit = os.environ.get("RENDER_GIT_COMMIT")
+    if render_commit:
+        return render_commit[:8]
     try:
         head = Path(".git/HEAD").read_text(encoding="utf-8").strip()
         if head.startswith("ref:"):

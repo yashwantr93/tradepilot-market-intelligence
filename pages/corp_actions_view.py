@@ -49,7 +49,7 @@ def render() -> None:
         etypes = st.multiselect("Event Type", sorted(df["event_type"].dropna().unique()),
                                 placeholder="All")
     with f3:
-        impacts = st.multiselect("Impact", ["Bullish", "Neutral", "Bearish"],
+        impacts = st.multiselect("Impact", ["Bullish", "Neutral", "Bearish", "Ambiguous"],
                                  placeholder="All")
     view = df.copy()
     if prio:

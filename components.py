@@ -89,6 +89,7 @@ def inject_global_css() -> None:
             font-size: 0.78rem;
             font-weight: 700;
             border: 1px solid transparent;
+            white-space: nowrap;
         }
         </style>
         """,
@@ -172,6 +173,34 @@ def badges_row(items: list[tuple[str, str]]) -> None:
 def section_header(title: str) -> None:
     """Render a consistent section header."""
     st.markdown(f'<div class="section-header">{title}</div>', unsafe_allow_html=True)
+
+
+_FRESHNESS_KIND = {"CURRENT": "green", "PARTIALLY_REFRESHED": "amber",
+                   "STALE": "amber", "FAILED": "red"}
+
+
+def freshness_badge(rs: dict) -> None:
+    """Render the standard `data.contracts.refresh_status()` badge — shared
+    by Opportunities/Events/Sector & Theme so all three describe data
+    freshness identically (Phase 15).
+
+    On a Render deployment (`core.config.IS_RENDER`), appends an explicit
+    "static snapshot" qualifier — this pattern's production instance never
+    refreshes itself; it only ever shows whatever was last committed and
+    pushed (see DEPLOYMENT.md). Without this, `CURRENT` on production could
+    be misread as "live," the exact confusion Phase 15 was asked to
+    prevent. The underlying CURRENT/PARTIALLY_REFRESHED/STALE/FAILED logic
+    itself is untouched — this only adds context about WHERE the data comes
+    from, never changes what the status says."""
+    from core.config import IS_RENDER  # local import: keep components.py light
+
+    kind = _FRESHNESS_KIND.get(rs["status"], "gray")
+    ref = f" · as of {rs['reference_date']}" if rs["reference_date"] else ""
+    st.markdown(badge(f"Data: {rs['status']}{ref}", kind), unsafe_allow_html=True)
+    if IS_RENDER:
+        st.caption("📦 Production static snapshot — refreshed only when the local "
+                  "pipeline's output is committed and deployed, not live. "
+                  "See ⚙️ Settings for exactly what was last shipped.")
 
 
 def style_fig(fig: go.Figure, height: int = 320, title: str | None = None) -> go.Figure:

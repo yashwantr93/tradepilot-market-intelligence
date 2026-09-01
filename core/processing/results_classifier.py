@@ -90,6 +90,76 @@ def compute_metrics(income_stmt: pd.DataFrame) -> dict | None:
     }
 
 
+def compute_all_metrics(income_stmt: pd.DataFrame) -> list[dict]:
+    """Phase 1 — retain the FULL fetched history, not just the latest quarter.
+
+    `compute_metrics()` above (unchanged, still used nowhere in this module's
+    own logic) only ever looks at column 0 (latest) vs column `n_back`
+    (same-quarter-prior-year). Every other column yfinance returns was being
+    fetched and then silently discarded. This function walks every column and
+    returns one dict per quarter:
+      - raw revenue_actual / profit_actual / margin_pct for ALL quarters
+        (basis="Raw" when no same-fetch YoY comparator exists for that
+        column), so nothing fetched is thrown away, and
+      - the full YoY growth/margin-change metrics (basis="YoY") for any
+        column that DOES have a same-fetch comparator `n_back` columns later.
+
+    Newest quarter first (mirrors the income statement's own column order).
+    """
+    if income_stmt is None or income_stmt.empty:
+        return []
+    if "Total Revenue" not in income_stmt.index or "Net Income" not in income_stmt.index:
+        return []
+
+    cols = list(income_stmt.columns)
+    n_back = R["yoy_quarters_back"]
+
+    def val(i: int) -> tuple[float | None, float | None]:
+        rev = income_stmt.loc["Total Revenue", cols[i]]
+        ni = income_stmt.loc["Net Income", cols[i]]
+        rev = float(rev) if pd.notna(rev) else None
+        ni = float(ni) if pd.notna(ni) else None
+        return rev, ni
+
+    out: list[dict] = []
+    for i in range(len(cols)):
+        rev_l, np_l = val(i)
+        if rev_l is None or np_l is None or rev_l == 0:
+            continue  # can't even report a raw margin for this quarter — skip it
+        period_end = pd.to_datetime(cols[i]).date()
+        margin_l = np_l / rev_l * 100
+
+        row = {
+            "period_end": period_end,
+            "quarter": quarter_label(period_end),
+            "revenue_actual": rev_l,
+            "profit_actual": np_l,
+            "margin_pct": round(margin_l, 2),
+            "revenue_growth_pct": None,
+            "profit_growth_pct": None,
+            "margin_change_pct": None,
+            "basis": "Raw",
+        }
+
+        # A YoY comparator exists only if a column `n_back` further out is
+        # present AND itself has usable Revenue/Net Income.
+        prior_i = i + n_back
+        if prior_i < len(cols):
+            rev_p, np_p = val(prior_i)
+            if rev_p is not None and np_p is not None and rev_p != 0:
+                rev_g = _growth(rev_l, rev_p)
+                prof_g = _growth(np_l, np_p)
+                margin_p = np_p / rev_p * 100
+                row.update({
+                    "revenue_growth_pct": rev_g,
+                    "profit_growth_pct": prof_g,
+                    "margin_change_pct": round(margin_l - margin_p, 2),
+                    "basis": "YoY",
+                })
+        out.append(row)
+    return out
+
+
 def classify(rev_g: float | None, prof_g: float | None) -> str:
     if rev_g is None or prof_g is None:
         return "Neutral"

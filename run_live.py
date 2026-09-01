@@ -72,8 +72,20 @@ def main() -> None:
         return
 
     trade_date = max(all_deals["trade_date"])
-    universe = sorted(all_deals["symbol"].unique())
-    log.info("Trade date: %s | deal universe: %d symbols", trade_date, len(universe))
+    deal_universe = sorted(all_deals["symbol"].unique())
+
+    # Phase 10: also cover the event-driven universe (recent corporate-action
+    # symbols) — deal-flow and general corporate announcements are genuinely
+    # different NSE feeds with very different symbol breadth (deals: a
+    # narrow, activity-driven subset; announcements: nearly the whole listed
+    # universe). Without this union, price_history stayed bounded to
+    # whichever symbols happened to have recent deal activity, leaving most
+    # corporate-action symbols permanently uncovered regardless of how many
+    # days this pipeline ran — see the Phase 10 report's ROOT CAUSES.
+    event_universe = repo.get_recent_corp_action_symbols(days=90)
+    universe = sorted(set(deal_universe) | set(event_universe))
+    log.info("Trade date: %s | deal universe: %d | event universe: %d | combined: %d symbols",
+             trade_date, len(deal_universe), len(event_universe), len(universe))
 
     # 2) Sectors (real, best-effort) + symbol master from the live universe.
     log.info("Resolving sectors for %d symbols (yfinance)...", len(universe))
